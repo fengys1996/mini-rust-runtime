@@ -54,6 +54,8 @@ impl Task {
         // A: Because future is not trait object, need convert to trait object
         let task = Arc::new(Task {
             // Q: Why need 'F: 'static'
+            // A: https://doc.rust-lang.org/reference/lifetime-elision.html#default-trait-object-lifetimes
+            // http://web.mit.edu/rust-lang_v1.25/arch/amd64_ubuntu1404/share/doc/rust/html/book/second-edition/ch19-02-advanced-lifetimes.html#inference-of-trait-object-lifetimes
             future: Mutex::new(Box::pin(future)),
             executor: sender.clone(),
         });
