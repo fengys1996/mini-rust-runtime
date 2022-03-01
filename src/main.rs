@@ -33,6 +33,7 @@ struct Task {
     // todo 1. avoid the mutex by using unsafe code
     // todo 2. the box is also avoid
     // todo 3. use the better data structure
+    // flag1: same with: future: Mutex<Pin<Box<dyn Future<Output = ()> + Send + 'static>>>,
     future: Mutex<Pin<Box<dyn Future<Output = ()> + Send>>>,
 
     // when a task is notied, is is queued into this channel
@@ -52,11 +53,13 @@ impl Task {
         // });
         // 
         // A: Because future is not trait object, need convert to trait object
+        let future: Mutex<Pin<Box<dyn Future<Output = ()> + Send>>> = Mutex::new(Box::pin(future));
         let task = Arc::new(Task {
             // Q: Why need 'F: 'static'
             // A: https://doc.rust-lang.org/reference/lifetime-elision.html#default-trait-object-lifetimes
             // http://web.mit.edu/rust-lang_v1.25/arch/amd64_ubuntu1404/share/doc/rust/html/book/second-edition/ch19-02-advanced-lifetimes.html#inference-of-trait-object-lifetimes
-            future: Mutex::new(Box::pin(future)),
+            // please see flag1
+            future,
             executor: sender.clone(),
         });
         let _ = sender.send(task);
