@@ -1,6 +1,6 @@
 use std::time::{Duration, Instant};
 
-use mini_rust_runtime::Delay;
+use mini_rust_runtime::delay::Delay;
 use mini_rust_runtime::MiniRust;
 
 fn main() {
