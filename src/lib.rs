@@ -7,55 +7,36 @@ use std::{
     pin::Pin,
     sync::{Arc, Mutex},
     task::{Context, Poll},
-    time::{Duration, Instant},
+    time::Instant,
 };
 
-fn main() {
-    let mini_rust = MiniRust::new();
-    mini_rust.spawn(async {
-        Delay {
-            when: Instant::now() + Duration::from_secs(5),
-        }
-        .await;
-        println!("hello mini-rust-runtime!");
-    });
-    mini_rust.spawn(async {
-        Delay {
-            when: Instant::now() + Duration::from_secs(10),
-        }
-        .await;
-        println!("hello fys!");
-    });
-    mini_rust.run();
-}
-
-struct MiniRust {
+pub struct MiniRust {
     scheduled: channel::Receiver<Arc<Task>>,
 
     sender: channel::Sender<Arc<Task>>,
 }
 
 impl MiniRust {
-    fn new() -> MiniRust {
+    pub fn new() -> MiniRust {
         let (sender, scheduled) = channel::unbounded();
         MiniRust { scheduled, sender }
     }
 
-    fn spawn<F>(&self, future: F)
+    pub fn spawn<F>(&self, future: F)
     where
         F: Future<Output = ()> + Send + 'static,
     {
         Task::spawn(future, &self.sender);
     }
 
-    fn run(&self) {
+    pub fn run(&self) {
         while let Ok(task) = self.scheduled.recv() {
             task.poll();
         }
     }
 }
 
-struct Task {
+pub struct Task {
     // todo 1. avoid the mutex by using unsafe code
     // todo 2. the box is also avoid
     // todo 3. use the better data structure
@@ -115,16 +96,15 @@ impl ArcWake for Task {
     }
 }
 
-struct Delay {
+pub struct Delay {
     // when to complete the delay
-    when: Instant,
+    pub when: Instant,
 }
 
 impl Future for Delay {
     type Output = ();
 
     // Q: why use Pin?
-    // Q: the memory layout of &str and String
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> task::Poll<Self::Output> {
         let now = Instant::now();
         if now >= self.when {
