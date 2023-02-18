@@ -1,4 +1,4 @@
-mod arc_wake;
+pub mod arc_wake;
 pub mod delay;
 
 use crossbeam::channel;
@@ -16,6 +16,12 @@ pub struct MiniRust {
     scheduled: channel::Receiver<Arc<Task>>,
 
     sender: channel::Sender<Arc<Task>>,
+}
+
+impl Default for MiniRust {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl MiniRust {
