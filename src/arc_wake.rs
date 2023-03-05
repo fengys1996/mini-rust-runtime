@@ -1,5 +1,5 @@
 use std::{
-    mem,
+    mem::{self, ManuallyDrop},
     sync::Arc,
     task::{RawWaker, RawWakerVTable, Waker},
 };
@@ -16,21 +16,38 @@ pub fn waker<W>(wake: Arc<W>) -> Waker
 where
     W: ArcWake + 'static,
 {
-    // Q: cast cost high?
     let ptr = Arc::into_raw(wake).cast::<()>();
 
     unsafe { Waker::from_raw(RawWaker::new(ptr, waker_vtable::<W>())) }
 }
 
 fn waker_vtable<W: ArcWake>() -> &'static RawWakerVTable {
-    todo!()
+    &RawWakerVTable::new(
+        clone_arc_raw::<W>,
+        wake_arc_raw::<W>,
+        wake_by_ref_arc_raw::<W>,
+        drop_arc_raw::<W>,
+    )
 }
 
-// TODO(fys): remove dead_code
-#[allow(dead_code)]
 unsafe fn clone_arc_raw<T: ArcWake>(data: *const ()) -> RawWaker {
     increase_refcount::<T>(data);
     RawWaker::new(data, waker_vtable::<T>())
+}
+
+unsafe fn wake_arc_raw<T: ArcWake>(data: *const ()) {
+    let arc: Arc<T> = Arc::from_raw(data.cast::<T>());
+    arc.wake();
+}
+
+unsafe fn wake_by_ref_arc_raw<T: ArcWake>(data: *const ()) {
+    let arc: Arc<T> = Arc::from_raw(data.cast::<T>());
+    let arc = ManuallyDrop::new(arc);
+    ArcWake::wake_by_ref(&arc);
+}
+
+unsafe fn drop_arc_raw<T: ArcWake>(data: *const ()) {
+    drop(Arc::<T>::from_raw(data.cast::<T>()))
 }
 
 unsafe fn increase_refcount<T: ArcWake>(data: *const ()) {

@@ -1,11 +1,9 @@
 pub mod arc_wake;
 pub mod delay;
 
+use arc_wake::waker;
 use crossbeam::channel;
-use futures::{
-    task::{self, ArcWake},
-    Future,
-};
+use futures::Future;
 use std::{
     pin::Pin,
     sync::{Arc, Mutex},
@@ -82,7 +80,7 @@ impl Task {
 
     fn poll(self: Arc<Self>) {
         // Get a waker referencing the task
-        let waker = task::waker(self.clone());
+        let waker = waker(self.clone());
 
         // Initialize the task context with the waker
         let mut cx = Context::from_waker(&waker);
@@ -95,11 +93,8 @@ impl Task {
     }
 }
 
-// Q: how to work?
-impl ArcWake for Task {
+impl arc_wake::ArcWake for Task {
     fn wake_by_ref(arc_self: &Arc<Self>) {
-        // Push task to executor channel.
-        // The executor recvices from the executor channel and polls tasks
         let _ = arc_self.executor.send(arc_self.clone());
     }
 }
